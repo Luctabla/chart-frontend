@@ -1,0 +1,33 @@
+# Defino variables
+{{- $chartFullName:= include "frontend.fullname" . -}}
+{{- $chartName:= include "frontend.name" . -}}
+{{- $default:= .Values.defaultWebValues }}
+{{- $labels:= include "frontend.labels" . }}
+{{- $releaseName:= .Release.Name -}}
+
+# Configuro el service de cada app definida
+{{ range $webName, $app := .Values.webs }}
+---
+{{- if $app.ingress.enabled }}
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: {{ $chartFullName }}-{{ $webName }}
+  labels:
+    {{- $labels | nindent 4 }}
+spec:
+  hosts:
+    - {{ $app.ingress.host | default $default.ingress.host | quote }}
+  gateways:
+    - {{ $app.ingress.gateway | default $default.ingress.gateway | quote }}
+  http:
+    - match:
+      - uri:
+          prefix: {{ $app.ingress.path | default $default.ingress.path | quote }}
+      route:
+      - destination:
+          host: {{ $chartFullName }}-{{ $webName }}
+          port:
+            number: {{ $app.port | default $default.port}}
+{{- end }}
+{{ end }}

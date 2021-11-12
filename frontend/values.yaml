@@ -1,0 +1,50 @@
+###############################################
+# CONFIGURACION DE WEBS
+###############################################
+
+webs:
+  frontend:
+    image:
+      repository: myproject/frontend
+#    readinessProbe:
+#      path: /frontend
+    autoscaling:
+      enabled: true
+    ingress:
+      enabled: true
+      path: /frontend
+
+
+###############################################
+# VALORES POR DEFECTO
+###############################################
+
+defaultWebValues:
+  podAnnotations:
+    sidecar.istio.io/inject: "true"
+  image:
+    registry: 172.30.1.1:5000
+    tag: 1
+    pullPolicy: Always
+    pullSecrets: oc-registry
+  podSecurityContext: {}
+  securityContext: {}
+  replicaCount: 1
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 75
+  ingress:
+    path: /
+    host: web.tseed.com.ar
+    gateway: istio-system/tseedcomar-gateway
+  resources:
+    limits:
+      memory: 500Mi
+      cpu: "0.5"
+    requests:
+      memory: 100Mi
+      cpu: "0.25"
+  port: 8080
+  type: ClusterIP

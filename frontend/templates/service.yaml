@@ -1,0 +1,27 @@
+# Defino variables
+{{- $chartFullName:= include "frontend.fullname" . -}}
+{{- $chartName:= include "frontend.name" . -}}
+{{- $default:= .Values.defaultWebValues }}
+{{- $labels:= include "frontend.labels" . }}
+{{- $releaseName:= .Release.Name -}}
+
+# Configuro el service de cada app definida
+{{ range $webName, $app := .Values.webs }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $chartFullName }}-{{ $webName }}
+  labels:
+    {{- $labels | nindent 4 }}
+spec:
+  type: {{ $app.type | default $default.type}}
+  ports:
+    - port: {{ $app.port | default $default.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ $chartName }}-{{ $webName }}
+    app.kubernetes.io/instance: {{ $releaseName }}
+{{ end }}

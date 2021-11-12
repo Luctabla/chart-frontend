@@ -1,0 +1,89 @@
+# Defino variables
+{{- $chartFullName:= include "frontend.fullname" . -}}
+{{- $chartName:= include "frontend.name" . -}}
+{{- $default:= .Values.defaultWebValues }}
+{{- $labels:= include "frontend.labels" . }}
+{{- $releaseName:= .Release.Name -}}
+
+# Configuro el deployment de cada webapp definida
+{{ range $webName, $app := .Values.webs }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $chartFullName }}-{{ $webName }}
+  labels:
+    {{- $labels | nindent 4 }}
+spec:
+{{- $autoscaling:= default $default.autoscaling $app.autoscaling }}
+{{- if not $autoscaling.enabled }}
+  replicas: {{ $app.replicaCount | default $default.replicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $chartName }}-{{ $webName }}
+      app.kubernetes.io/instance: {{ $releaseName }}
+  template:
+    metadata:
+    {{- with $app.podAnnotations | default $default.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        app.kubernetes.io/name: {{ $chartName }}-{{ $webName }}
+        app.kubernetes.io/instance: {{ $releaseName }}
+    spec:
+      imagePullSecrets:
+        - name: {{ $app.image.pullSecrets | default $default.image.pullSecrets }}
+      securityContext:
+      {{- toYaml ($app.podSecurityContext | default $default.podSecurityContext) | nindent 8 }}
+      containers:
+        - name: {{ $chartName }}-{{ $webName }}
+          securityContext:
+          {{- toYaml ($app.podSecurityContext | default $default.podSecurityContext) | nindent 12 }}
+          image: {{ $app.image.registry | default $default.image.registry }}/{{ $app.image.repository }}:{{ $app.image.tag | default $default.image.tag }}
+          imagePullPolicy: {{ $app.image.pullPolicy | default $default.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $app.port | default $default.port}}
+              protocol: TCP
+          {{- if $app.livenessProbe }}
+          livenessProbe:
+            httpGet:
+              path: {{ $app.livenessProbe.path }}
+              port: http
+          {{- end }}
+          {{- if $app.readinessProbe }}
+          readinessProbe:
+            httpGet:
+              path: {{ $app.readinessProbe.path }}
+              port: http
+          {{- end }}
+          resources:
+          {{- toYaml ($app.resources | default $default.resources) | nindent 12 }}
+          volumeMounts:
+          {{- range $index, $volume := $app.volumes }}
+            - name: {{ $volume.name }}
+              mountPath: {{ $volume.mount.mountPath}}
+              subPath: {{ $volume.mount.subPath }}
+          {{- end }}
+      volumes:
+      {{- range $index, $volume := $app.volumes }}
+        - name: {{ $volume.name }}
+          configMap:
+            name: {{ $volume.configMap.name }}
+      {{- end }}
+      {{- with $app.nodeSelector | default $default.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $app.affinity | default $default.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8}}
+      {{- end }}
+      {{- with $app.tolerations | default $default.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+{{ end }}

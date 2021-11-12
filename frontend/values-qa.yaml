@@ -1,0 +1,7 @@
+# DEVELOPEMENT values for frontend.
+defaultWebValues:
+  image:
+    tag: qa
+
+  ingress:
+    host: webt.tseed.com.ar

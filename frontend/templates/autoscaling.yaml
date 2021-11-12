@@ -1,0 +1,27 @@
+# Defino variables
+{{- $chartFullName:= include "frontend.fullname" . -}}
+{{- $chartName:= include "frontend.name" . -}}
+{{- $default:= .Values.defaultWebValues }}
+{{- $labels:= include "frontend.labels" . }}
+{{- $releaseName:= .Release.Name -}}
+
+# Configuro el deployment de cada webapp definida
+{{ range $webName, $app := .Values.webs }}
+---
+{{- if $app.autoscaling.enabled }}
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $chartFullName }}-{{ $webName }}
+  labels:
+    {{- $labels | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ $chartFullName }}-{{ $webName }}
+  minReplicas: {{ $app.autoscaling.minReplicas | default $default.autoscaling.minReplicas }}
+  maxReplicas: {{ $app.autoscaling.maxReplicas | default $default.autoscaling.maxReplicas }}
+  targetCPUUtilizationPercentage: {{ $app.autoscaling.targetCPUUtilizationPercentage | default $default.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}
+{{ end }}
