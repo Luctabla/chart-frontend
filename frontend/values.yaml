@@ -24,7 +24,7 @@ defaultWebValues:
     sidecar.istio.io/inject: "true"
   image:
     registry: docker.io
-    tag: latest
+    tag: 4.5
     pullPolicy: Always
     pullSecrets: oc-registry
   podSecurityContext: {}
